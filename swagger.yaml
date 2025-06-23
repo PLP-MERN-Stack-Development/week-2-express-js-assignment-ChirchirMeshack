@@ -1,0 +1,495 @@
+openapi: 3.0.0
+info:
+  title: Products API - Express.js RESTful API
+  description: |
+    A complete RESTful API built with Express.js that implements CRUD operations, 
+    middleware, error handling, and advanced features for managing products.
+
+    ## Features
+    - **RESTful API** with full CRUD operations
+    - **Custom Middleware** for logging, authentication, and validation
+    - **Error Handling** with custom error classes and proper HTTP status codes
+    - **Advanced Features** including filtering, pagination, search, and statistics
+    # - **Authentication** using API key validation
+    - **Input Validation** for all product operations
+
+    # ## Authentication
+    # Most endpoints require an API key in the request headers:
+    # ```
+    # x-api-key: your-secret-api-key-123
+    # ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: chirchirmeshack20@gmail.com
+  license:
+    name: ISC
+    url: https://opensource.org/licenses/ISC
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  # - url: https://api.example.com
+  #   description: Production server
+
+components:
+  # securitySchemes:
+  #   ApiKeyAuth:
+  #     type: apiKey
+  #     in: header
+  #     name: x-api-key
+  #     description: API key for authentication
+
+  schemas:
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - price
+        - category
+        - inStock
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the product
+          example: "1"
+        name:
+          type: string
+          description: Name of the product
+          example: "Laptop"
+        description:
+          type: string
+          description: Detailed description of the product
+          example: "High-performance laptop for work and gaming"
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Price of the product
+          example: 999.99
+        category:
+          type: string
+          description: Category of the product
+          example: "Electronics"
+        inStock:
+          type: boolean
+          description: Whether the product is currently in stock
+          example: true
+
+    ProductInput:
+      type: object
+      required:
+        - name
+        - description
+        - price
+        - category
+        - inStock
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Name of the product
+          example: "Smartphone"
+        description:
+          type: string
+          minLength: 1
+          description: Detailed description of the product
+          example: "Latest smartphone with advanced features"
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Price of the product
+          example: 699.99
+        category:
+          type: string
+          minLength: 1
+          description: Category of the product
+          example: "Electronics"
+        inStock:
+          type: boolean
+          description: Whether the product is currently in stock
+          example: true
+
+    ProductsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        pagination:
+          type: object
+          properties:
+            currentPage:
+              type: integer
+              example: 1
+            totalPages:
+              type: integer
+              example: 1
+            totalItems:
+              type: integer
+              example: 3
+            itemsPerPage:
+              type: integer
+              example: 10
+
+    SearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+          example: "laptop"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        count:
+          type: integer
+          example: 1
+
+    StatsResponse:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+          example: 3
+        inStock:
+          type: integer
+          example: 2
+        outOfStock:
+          type: integer
+          example: 1
+        categories:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            Electronics: 1
+            "Home & Kitchen": 1
+            Sports: 1
+        averagePrice:
+          type: number
+          format: float
+          example: 406.66
+        priceRange:
+          type: object
+          properties:
+            min:
+              type: number
+              format: float
+              example: 89.99
+            max:
+              type: number
+              format: float
+              example: 999.99
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "ValidationError"
+            message:
+              type: string
+              example: "Name is required and must be a non-empty string"
+            statusCode:
+              type: integer
+              example: 400
+
+paths:
+  /:
+    get:
+      summary: Welcome message
+      description: Returns a welcome message for the API
+      tags:
+        - General
+      responses:
+        "200":
+          description: Welcome message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Hello World! Welcome to the Products API"
+
+  /api/products:
+    get:
+      summary: Get all products
+      description: |
+        Retrieve all products with optional filtering, pagination, and search.
+        Supports query parameters for category filtering, pagination, and search.
+      tags:
+        - Products
+      parameters:
+        - name: category
+          in: query
+          description: Filter products by category
+          required: false
+          schema:
+            type: string
+          example: "Electronics"
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+        - name: search
+          in: query
+          description: Search term for name and description
+          required: false
+          schema:
+            type: string
+          example: "laptop"
+      responses:
+        "200":
+          description: List of products with pagination info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductsResponse"
+              example:
+                products:
+                  - id: "1"
+                    name: "Laptop"
+                    description: "High-performance laptop for work and gaming"
+                    price: 999.99
+                    category: "Electronics"
+                    inStock: true
+                pagination:
+                  currentPage: 1
+                  totalPages: 1
+                  totalItems: 1
+                  itemsPerPage: 10
+
+    post:
+      summary: Create a new product
+      description: Create a new product. Requires authentication via API key.
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+            example:
+              name: "Smartphone"
+              description: "Latest smartphone with advanced features"
+              price: 699.99
+              category: "Electronics"
+              inStock: true
+      responses:
+        "201":
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/products/search:
+    get:
+      summary: Search products
+      description: Search products by name or description
+      tags:
+        - Products
+      parameters:
+        - name: q
+          in: query
+          description: Search query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          example: "laptop"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          description: Missing search query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/products/stats:
+    get:
+      summary: Get product statistics
+      description: Get comprehensive statistics about all products
+      tags:
+        - Products
+      responses:
+        "200":
+          description: Product statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResponse"
+
+  /api/products/{id}:
+    get:
+      summary: Get product by ID
+      description: Retrieve a specific product by its ID
+      tags:
+        - Products
+      parameters:
+        - name: id
+          in: path
+          description: Product ID
+          required: true
+          schema:
+            type: string
+          example: "1"
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      summary: Update product
+      description: Update an existing product by ID. Requires authentication via API key.
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Product ID
+          required: true
+          schema:
+            type: string
+          example: "1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+            example:
+              name: "Updated Laptop"
+              description: "Updated laptop description"
+              price: 1099.99
+              category: "Electronics"
+              inStock: false
+      responses:
+        "200":
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete product
+      description: Delete a product by ID. Requires authentication via API key.
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Product ID
+          required: true
+          schema:
+            type: string
+          example: "1"
+      responses:
+        "200":
+          description: Product deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product deleted successfully"
+                  product:
+                    $ref: "#/components/schemas/Product"
+        "401":
+          description: Authentication error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+tags:
+  - name: General
+    description: General API endpoints
+  - name: Products
+    description: Product management operations
